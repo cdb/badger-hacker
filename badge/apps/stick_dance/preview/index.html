@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0e18">
+  <title>Stick Dance - your tiny dance floor</title>
+  <link rel="icon" href="../icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <a class="wordmark" href="./" aria-label="Stick Dance home"><span class="logo">/</span> STICK DANCE</a>
+      <span class="tag"><span class="dot"></span> LOCAL PLAYGROUND</span>
+    </header>
+    <section class="intro">
+      <p class="eyebrow">SMALL FIGURE. BIG MOVES.</p>
+      <h1>Your keyboard.<br>Their dance floor.</h1>
+      <p class="lede">Hold a direction and find your groove.<br>No score, no wrong moves. Just dance.</p>
+    </section>
+    <section class="playground" aria-label="Interactive dance playground">
+      <div class="stage">
+        <div class="stage-top"><span><span class="dot"></span> ON THE FLOOR</span><span>112 BPM</span></div>
+        <canvas id="dance" width="640" height="480" tabindex="0" aria-label="Dancing stick figure. Use arrow keys or WASD to dance, Space for automatic dancing, C for color, R to reset."></canvas>
+        <div class="stage-bottom"><span id="move" role="status">Ready when you are</span><span id="mode">YOU LEAD</span></div>
+      </div>
+      <aside class="controls">
+        <p class="eyebrow">YOU'RE THE CHOREOGRAPHER</p>
+        <h2>Make a move.</h2>
+        <div class="dpad" aria-label="Hold to dance">
+          <button class="direction up" data-move="up" aria-label="Hold to jump"><span>&uarr;</span><small>REACH</small></button>
+          <button class="direction left" data-move="left" aria-label="Hold to slide left"><span>&larr;</span><small>SLIDE</small></button>
+          <div class="dpad-center" aria-hidden="true">+</div>
+          <button class="direction right" data-move="right" aria-label="Hold to slide right"><span>&rarr;</span><small>SLIDE</small></button>
+          <button class="direction down" data-move="down" aria-label="Hold to squat"><span>&darr;</span><small>DROP</small></button>
+        </div>
+        <p class="hint">Hold arrow keys or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></p>
+        <div class="actions">
+          <button id="auto" aria-pressed="false"><span>Auto groove</span><kbd>SPACE</kbd></button>
+          <button id="color"><span><span class="swatch"></span> Change color</span><kbd>C</kbd></button>
+          <button id="reset"><span>Start fresh</span><kbd>R</kbd></button>
+        </div>
+        <p class="note">Take over any time. Direction keys override auto groove while you hold them.</p>
+      </aside>
+    </section>
+    <p id="error" class="error" role="alert" hidden></p>
+    <footer><span>BUILT FOR THE UNIVERSE 2026 BADGE</span><span>Browser preview. Real badge moves.</span></footer>
+  </main>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>
