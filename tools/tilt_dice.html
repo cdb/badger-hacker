@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tilt Dice - local playground</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; background: #0c111b; color: #e9eff8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 38px 24px; }
+    main { max-width: 1080px; margin: auto; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 32px; }
+    h1 { font-size: 30px; letter-spacing: -1px; margin: 6px 0; }
+    .eyebrow { color: #c3f76e; font: 11px ui-monospace, monospace; letter-spacing: 3px; text-transform: uppercase; }
+    .muted, p { color: #94a5bc; font-size: 14px; line-height: 1.6; }
+    .local { border: 1px solid #304131; border-radius: 30px; padding: 8px 13px; color: #c3f76e; font: 11px ui-monospace, monospace; white-space: nowrap; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 22px; }
+    .stage, aside, .photos { border: 1px solid #273348; border-radius: 18px; background: #121b29; }
+    .stage { padding: 30px 24px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 440px; }
+    .device { width: 100%; max-width: 580px; padding: 14px; border-radius: 20px; background: #252f40; border: 1px solid #4b5a70; box-shadow: 0 24px 50px #0005; }
+    #screen { width: 100%; display: block; border-radius: 6px; image-rendering: pixelated; }
+    .device-footer { display: flex; gap: 7px; justify-content: center; padding-top: 12px; }
+    .device-footer i { width: 5px; height: 5px; background: #c3f76e; border-radius: 50%; opacity: .7; }
+    .actions { display: flex; gap: 10px; margin-top: 26px; }
+    button, .upload { border: 1px solid #3c4d64; background: #202e41; color: #e9eff8; border-radius: 9px; padding: 10px 16px; font: inherit; font-size: 13px; cursor: pointer; }
+    button:hover, .upload:hover { background: #2b3c53; }
+    button:focus-visible, .upload:focus-within, canvas:focus-visible { outline: 2px solid #c3f76e; outline-offset: 4px; }
+    .primary { background: #c3f76e; color: #172219; border-color: #c3f76e; font-weight: 650; }
+    .primary:hover { background: #d3ff91; }
+    aside { padding: 23px; }
+    h2 { font-size: 15px; margin: 0 0 8px; }
+    aside p { font-size: 12px; margin: 0 0 18px; }
+    #tilt { width: 100%; aspect-ratio: 1; background: #0c1421; border: 1px solid #34445c; border-radius: 14px; touch-action: none; cursor: crosshair; }
+    .tilt-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .tilt-actions button { padding: 8px 11px; flex: 1; }
+    #gravity { font: 11px ui-monospace, monospace; color: #a4b4c9; margin: 13px 0 0; }
+    .photos { margin-top: 22px; padding: 23px; }
+    .photo-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+    .photos p { margin: 4px 0 20px; font-size: 12px; }
+    .upload { position: relative; display: inline-block; white-space: nowrap; overflow: hidden; }
+    .upload input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .faces { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+    figure { margin: 0; background: #0c1421; padding: 12px 8px; border-radius: 10px; text-align: center; }
+    figure img { width: 48px; height: 48px; image-rendering: pixelated; border-radius: 5px; }
+    figcaption { color: #94a5bc; font: 10px ui-monospace, monospace; margin-top: 8px; }
+    #status { min-height: 20px; margin: 16px 0 0; color: #c3f76e; font-size: 12px; }
+    #status.error { color: #ff9aab; }
+    .hint { margin: 18px 0 0; font-size: 11px; text-align: center; }
+    kbd { color: #c6d3e4; background: #202e41; padding: 2px 5px; border-radius: 4px; font: 10px ui-monospace, monospace; }
+    footer { color: #718198; font-size: 11px; margin-top: 20px; text-align: center; line-height: 1.6; }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } aside { display: grid; grid-template-columns: 1fr 150px; gap: 12px; } aside p { grid-column: 1; } #tilt { grid-column: 2; grid-row: 1 / 5; } .stage { min-height: 0; } .faces { gap: 5px; } figure { padding: 8px 2px; } figure img { width: 36px; height: 36px; } header .local { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .device { box-shadow: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="eyebrow">Badge playground / 001</div><h1>Tilt Dice</h1><div class="muted">A tiny box of gravity. Your photos, on a roll.</div></div>
+    <span class="local">LOCAL ONLY / NO BADGE CONNECTION</span>
+  </header>
+  <div class="layout">
+    <section class="stage" aria-label="Dice preview">
+      <div class="device">
+        <canvas id="screen" width="320" height="240" aria-label="Animated 3D photo die"></canvas>
+        <div class="device-footer" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="actions"><button id="roll" class="primary">Toss the die</button><button id="reset">Reset</button></div>
+      <p class="hint"><kbd>Arrow keys</kbd> tilt &nbsp; <kbd>Space</kbd> toss &nbsp; <kbd>R</kbd> reset</p>
+    </section>
+    <aside aria-label="Gravity controls">
+      <h2>Which way is down?</h2>
+      <p>Drag the dot to tilt your imaginary badge. The die falls toward that edge, bumps the walls, and settles.</p>
+      <canvas id="tilt" width="240" height="240" tabindex="0" role="application" aria-label="Tilt pad. Use arrow keys to tilt, F for flat, U for upright."></canvas>
+      <div class="tilt-actions"><button id="flat">Lay flat</button><button id="upright">Upright</button></div>
+      <div id="gravity" aria-live="off"></div>
+    </aside>
+  </div>
+  <section class="photos">
+    <div class="photo-heading">
+      <div><h2>Six sides. Any pictures.</h2><p>Choose 1 to 6 images. Fewer than six repeat around the cube.<br>Photos are center-cropped to 48x48 and saved locally into this app.</p></div>
+      <label class="upload">Choose photos<input id="photos" type="file" accept="image/png,image/jpeg,image/webp" multiple aria-label="Choose one to six photos for the dice faces"></label>
+    </div>
+    <div class="faces" id="faces"></div>
+    <p id="status" role="status">Ready with colorful starter faces. Nothing is sent to an external service.</p>
+  </section>
+  <footer>Uses the badge app's Python physics. Browser drawing is an approximation, not a firmware emulator.<br>No device access, deployment, Wi-Fi, or external dependencies.</footer>
+</main>
+<script>
+  const screen = document.querySelector("#screen"), ctx = screen.getContext("2d");
+  const pad = document.querySelector("#tilt"), pc = pad.getContext("2d");
+  const status = document.querySelector("#status");
+  let textures = [], gx = 0, gy = 1, action = null, stopped = false;
+  const keys = new Set();
+  function message(text, error = false) { status.textContent = text; status.classList.toggle("error", error); }
+  async function post(path, data) {
+    const response = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(data)});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
+    return result;
+  }
+  async function loadTextures() {
+    const next = await Promise.all(Array.from({length: 6}, (_, i) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Could not load face ${i + 1}`));
+      img.src = `/assets/${i + 1}.png?${Date.now()}`;
+    })));
+    textures = next;
+    document.querySelector("#faces").replaceChildren(...next.map((img, i) => {
+      const figure = document.createElement("figure"), caption = document.createElement("figcaption");
+      img.alt = `Die face ${i + 1}`; caption.textContent = `FACE ${i + 1}`;
+      figure.append(img, caption); return figure;
+    }));
+  }
+  function draw(faces) {
+    ctx.fillStyle = "#0d121e"; ctx.fillRect(0, 0, 320, 240);
+    ctx.fillStyle = "#c3f76e"; ctx.font = "bold 10px monospace"; ctx.fillText("TILT DICE", 10, 18);
+    ctx.fillStyle = "#3e5269"; ctx.fillRect(7, 29, 306, 200);
+    ctx.fillStyle = "#1b2637"; ctx.fillRect(8, 30, 304, 198);
+    ctx.strokeStyle = "#243248"; ctx.lineWidth = 0.5;
+    for (let x = 24; x < 312; x += 20) { ctx.beginPath(); ctx.moveTo(x, 30); ctx.lineTo(x, 228); ctx.stroke(); }
+    for (let y = 44; y < 228; y += 20) { ctx.beginPath(); ctx.moveTo(8, y); ctx.lineTo(312, y); ctx.stroke(); }
+    for (const [, index, points, light] of faces) {
+      const [a, b, , d] = points;
+      ctx.save(); ctx.beginPath();
+      points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.closePath(); ctx.clip();
+      ctx.setTransform((b[0] - a[0]) / 48, (b[1] - a[1]) / 48,
+                       (d[0] - a[0]) / 48, (d[1] - a[1]) / 48, a[0], a[1]);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(textures[index], 0, 0);
+      ctx.fillStyle = `rgba(0,0,0,${(1 - light) * 150 / 255})`; ctx.fillRect(0, 0, 48, 48);
+      ctx.restore();
+      ctx.strokeStyle = "#3e5269"; ctx.lineWidth = 0.8;
+      ctx.beginPath(); points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.stroke();
+    }
+  }
+  function drawPad(x, y) {
+    pc.clearRect(0, 0, 240, 240);
+    pc.strokeStyle = "#2b3a50"; pc.lineWidth = 1;
+    for (const radius of [34, 68, 102]) { pc.beginPath(); pc.arc(120, 120, radius, 0, Math.PI * 2); pc.stroke(); }
+    pc.beginPath(); pc.moveTo(120, 10); pc.lineTo(120, 230); pc.moveTo(10, 120); pc.lineTo(230, 120); pc.stroke();
+    pc.strokeStyle = "#c3f76e"; pc.lineWidth = 2; pc.beginPath(); pc.moveTo(120, 120); pc.lineTo(120 + x * 96, 120 + y * 96); pc.stroke();
+    pc.fillStyle = "#c3f76e"; pc.beginPath(); pc.arc(120 + x * 96, 120 + y * 96, 9, 0, Math.PI * 2); pc.fill();
+    document.querySelector("#gravity").textContent = `GRAVITY  x ${x.toFixed(2)} / y ${y.toFixed(2)}`;
+  }
+  function setTilt(event) {
+    const r = pad.getBoundingClientRect();
+    gx = Math.max(-1, Math.min(1, ((event.clientX - r.left) / r.width - 0.5) * 2.5));
+    gy = Math.max(-1, Math.min(1, ((event.clientY - r.top) / r.height - 0.5) * 2.5));
+  }
+  pad.onpointerdown = event => { pad.setPointerCapture(event.pointerId); setTilt(event); };
+  pad.onpointermove = event => { if (pad.hasPointerCapture(event.pointerId)) setTilt(event); };
+  document.querySelector("#flat").onclick = () => { gx = 0; gy = 0; };
+  document.querySelector("#upright").onclick = () => { gx = 0; gy = 1; };
+  document.querySelector("#roll").onclick = () => { action = "roll"; };
+  document.querySelector("#reset").onclick = () => { action = "reset"; };
+  window.addEventListener("keydown", event => {
+    if (event.target.closest("input, button") || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(event.code)) event.preventDefault();
+    keys.add(event.code);
+    if (event.code === "Space" && !event.repeat) action = "roll";
+    if (event.code === "KeyR") action = "reset";
+    if (event.code === "KeyF") { gx = 0; gy = 0; }
+    if (event.code === "KeyU") { gx = 0; gy = 1; }
+  });
+  window.addEventListener("keyup", event => keys.delete(event.code));
+  window.addEventListener("blur", () => keys.clear());
+  document.querySelector("#photos").onchange = async event => {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    if (files.length > 6) { message("Choose at most six photos.", true); event.target.value = ""; return; }
+    try {
+      const faces = [];
+      for (const file of files) {
+        const bitmap = await createImageBitmap(file);
+        const canvas = document.createElement("canvas"); canvas.width = canvas.height = 48;
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff"; context.fillRect(0, 0, 48, 48);
+        const side = Math.min(bitmap.width, bitmap.height);
+        context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 48, 48);
+        bitmap.close(); faces.push(canvas.toDataURL("image/png"));
+      }
+      await post("/faces", {faces}); await loadTextures();
+      message(`Saved ${files.length} photo${files.length === 1 ? "" : "s"} across six faces in badge/apps/tilt_dice/assets/.`);
+    } catch (error) { message(error.message, true); }
+    event.target.value = "";
+  };
+  let previous = performance.now();
+  async function frame() {
+    if (stopped) return;
+    const now = performance.now(), dt = (now - previous) / 1000; previous = now;
+    const x = keys.has("ArrowLeft") ? -1 : keys.has("ArrowRight") ? 1 : gx;
+    const y = keys.has("ArrowUp") ? -1 : keys.has("ArrowDown") ? 1 : gy;
+    const currentAction = action; action = null;
+    try {
+      const state = await post("/step", {dt, gx: x, gy: y, action: currentAction});
+      draw(state.faces); drawPad(x, y);
+      setTimeout(frame, 20);
+    } catch (error) { stopped = true; message(`Preview stopped: ${error.message}. Restart the server and reload.`, true); }
+  }
+  loadTextures().then(frame).catch(error => message(error.message, true));
+</script>
+</body>
+</html>
