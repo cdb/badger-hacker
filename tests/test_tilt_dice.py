@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "badge" / "apps" / "tilt_dice"
 sys.path.insert(0, str(APP))
-from physics import Dice, gravity_from_imu, rotation, texture_spans
+from physics import Dice, DiceTray, gravity_from_imu, rotation, texture_spans
 
 spec = importlib.util.spec_from_file_location("preview", ROOT / "tools" / "preview_tilt_dice.py")
 preview = importlib.util.module_from_spec(spec)
@@ -172,6 +172,85 @@ class PhysicsTests(unittest.TestCase):
                         self.assertTrue(-0.00001 <= value <= 1.00001, value)
 
 
+class TrayTests(unittest.TestCase):
+    def setUp(self):
+        random.seed(41)
+        self.tray = DiceTray()
+
+    def test_count_is_bounded_and_empty_tray_is_usable(self):
+        self.assertEqual(len(self.tray.dice), 1)
+        for _ in range(10):
+            self.tray.remove()
+        self.tray.roll()
+        self.tray.flip()
+        self.tray.step(0.1, 1, 1)
+        self.assertEqual(self.tray.faces(), [])
+        for _ in range(10):
+            self.tray.add()
+        self.assertEqual(len(self.tray.dice), 6)
+        self.assertEqual(len({(die.x, die.y) for die in self.tray.dice}), 6)
+
+    def test_remove_preserves_remaining_dice_and_add_does_not_reset(self):
+        original = self.tray.dice[0]
+        original.x = 100
+        self.tray.add()
+        self.tray.remove()
+        self.assertIs(self.tray.dice[0], original)
+        self.assertEqual(original.x, 100)
+
+    def test_toss_applies_to_every_die(self):
+        for _ in range(5):
+            self.tray.add()
+        self.tray.roll()
+        for die in self.tray.dice:
+            self.assertLess(die.vy, -169)
+            self.assertGreater(abs(die.wx) + abs(die.wy) + abs(die.wz), 0)
+
+    def test_pair_collision_separates_and_bounces(self):
+        self.tray.add()
+        a, b = self.tray.dice
+        a.q = b.q = (1, 0, 0, 0)
+        a.x, b.x, a.y, b.y = 140, 175, 120, 120
+        a.vx, b.vx = 50, -50
+        self.tray.step(1 / 120, 0, 0)
+        self.assertGreaterEqual(b.x - a.x, a.extents()[0] + b.extents()[0] - 0.001)
+        self.assertLess(a.vx, 0)
+        self.assertGreater(b.vx, 0)
+
+    def test_six_dice_remain_contained_with_changing_gravity(self):
+        for _ in range(5):
+            self.tray.add()
+        for frame in range(600):
+            if frame % 120 == 0:
+                self.tray.roll()
+            self.tray.step(1 / 30, math.sin(frame / 70), math.cos(frame / 70))
+            for die in self.tray.dice:
+                ex, ey = die.extents()
+                left, top, right, bottom = die.bounds
+                self.assertGreaterEqual(die.x - ex, left - 0.00001)
+                self.assertLessEqual(die.x + ex, right + 0.00001)
+                self.assertGreaterEqual(die.y - ey, top - 0.00001)
+                self.assertLessEqual(die.y + ey, bottom + 0.00001)
+
+    def test_six_dice_piles_do_not_overlap_visibly(self):
+        for gx, gy in ((0, 1), (1, 0), (1, 1)):
+            with self.subTest(gravity=(gx, gy)):
+                random.seed(41)
+                self.tray = DiceTray()
+                for _ in range(5):
+                    self.tray.add()
+                self.tray.roll()
+                for _ in range(900):
+                    self.tray.step(1 / 60, gx, gy)
+                for i, a in enumerate(self.tray.dice):
+                    for b in self.tray.dice[i + 1:]:
+                        ax, ay = a.extents()
+                        bx, by = b.extents()
+                        overlap = min(ax + bx - abs(a.x - b.x),
+                                      ay + by - abs(a.y - b.y))
+                        self.assertLess(overlap, 0.5)
+
+
 class AssetTests(unittest.TestCase):
     def test_all_faces_and_custom_icon_are_square_pngs(self):
         import base64
@@ -198,7 +277,7 @@ class AssetTests(unittest.TestCase):
             for i in range(1, 7):
                 (app / "assets" / ("%d.png" % i)).write_bytes(original)
             server = preview.HTTPServer(("127.0.0.1", 0), preview.Handler)
-            server.die = Dice()
+            server.tray = DiceTray()
             url = "http://127.0.0.1:%d" % server.server_port
             thread = threading.Thread(target=server.serve_forever)
             thread.start()
@@ -220,6 +299,15 @@ class AssetTests(unittest.TestCase):
                     raised.exception.close()
                     state = post("/step", {"dt": 0.1, "gx": -1, "gy": 0, "action": "roll"})
                     self.assertTrue(state["faces"])
+                    self.assertEqual(state["count"], 1)
+                    for _ in range(8):
+                        state = post("/step", {"action": "add", "dt": 0})
+                    self.assertEqual(state["count"], 6)
+                    for _ in range(8):
+                        state = post("/step", {"action": "remove", "dt": 0})
+                    self.assertEqual(state, {"faces": [], "count": 0})
+                    state = post("/step", {"action": "add", "dt": 0})
+                    self.assertEqual(state["count"], 1)
                     png = "data:image/png;base64," + base64.b64encode(original).decode()
                     self.assertEqual(post("/faces", {"faces": [png]}), {"saved": 6})
                     for i in range(1, 7):
@@ -279,7 +367,7 @@ class AssetTests(unittest.TestCase):
                 return (0, -16384 if self.down else 16384, 0, 0, 0, 0)
 
             def held(self, button):
-                return False
+                return button in self.pressed_buttons
 
             def pressed(self, button):
                 return button in self.pressed_buttons
@@ -306,9 +394,18 @@ class AssetTests(unittest.TestCase):
             namespace["BUTTON_" + button] = button
 
         def run(update):
-            for button in ("SELECT", "BACK", "MENU", None):
+            for button, count in (("SELECT", 1), ("BACK", 0), ("BACK", 0),
+                                  ("MENU", 1), ("MENU", 2), ("SELECT", 2),
+                                  ("UP", 2), ("DOWN", 2), ("LEFT", 2), ("RIGHT", 2)):
                 badge.pressed_buttons = {button}
-                update()
+                with patch.object(namespace["tray"], "step", wraps=namespace["tray"].step) as step:
+                    update()
+                    if button in ("UP", "DOWN", "LEFT", "RIGHT"):
+                        gx, gy = step.call_args.args[1:]
+                        expected = {"UP": (0, -1), "DOWN": (0, 1),
+                                    "LEFT": (-1, 1), "RIGHT": (1, 1)}[button]
+                        self.assertEqual((gx, gy), expected)
+                self.assertEqual(len(namespace["tray"].dice), count)
             badge.down = True
             update()
 

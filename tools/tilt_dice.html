@@ -61,15 +61,15 @@
   <div class="layout">
     <section class="stage" aria-label="Dice preview">
       <div class="device">
-        <canvas id="screen" width="320" height="240" aria-label="Animated 3D photo die"></canvas>
+        <canvas id="screen" width="320" height="240" aria-label="Animated 3D photo dice"></canvas>
         <div class="device-footer" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       </div>
-      <div class="actions"><button id="roll" class="primary">Toss the die</button><button id="reset">Reset</button></div>
-      <p class="hint"><kbd>Arrow keys</kbd> tilt &nbsp; <kbd>Enter</kbd> / <kbd>Space</kbd> toss &nbsp; <kbd>R</kbd> reset</p>
+      <div class="actions"><button id="remove" aria-label="Remove a die (Back)">-</button><span id="count" role="status" style="align-self:center;white-space:nowrap">1 / 6 dice</span><button id="add" aria-label="Add a die (Menu)">+</button><button id="roll" class="primary">Toss all</button></div>
+      <p class="hint"><kbd>Arrows</kbd> tilt &nbsp; <kbd>Enter</kbd> / <kbd>Space</kbd> toss<br><kbd>M</kbd> add (Menu) &nbsp; <kbd>B</kbd> remove (Back)</p>
     </section>
     <aside aria-label="Gravity controls">
       <h2>Which way is down?</h2>
-      <p>Drag the dot to tilt your imaginary badge. The die falls toward that edge, bumps the walls, and settles.</p>
+      <p>Drag the dot to tilt your imaginary badge. Dice fall toward that edge, bump each other and the walls, and settle. Keep 0 to 6 dice in the tray.</p>
       <canvas id="tilt" width="240" height="240" tabindex="0" role="application" aria-label="Tilt pad. Use arrow keys to tilt, F for flat, U for upright."></canvas>
       <div class="tilt-actions"><button id="flat">Lay flat</button><button id="upright">Upright</button></div>
       <div id="gravity" aria-live="off"></div>
@@ -112,9 +112,14 @@
       figure.append(img, caption); return figure;
     }));
   }
-  function draw(faces) {
+  function draw(faces, count) {
     ctx.fillStyle = "#0d121e"; ctx.fillRect(0, 0, 320, 240);
     ctx.fillStyle = "#c3f76e"; ctx.font = "bold 10px monospace"; ctx.fillText("TILT DICE", 10, 18);
+    ctx.fillText(`${count} / 6`, 270, 18);
+    document.querySelector("#count").textContent = `${count} / 6 dice`;
+    document.querySelector("#add").disabled = count === 6;
+    document.querySelector("#remove").disabled = count === 0;
+    document.querySelector("#roll").disabled = count === 0;
     ctx.fillStyle = "#3e5269"; ctx.fillRect(7, 29, 306, 200);
     ctx.fillStyle = "#1b2637"; ctx.fillRect(8, 30, 304, 198);
     ctx.strokeStyle = "#243248"; ctx.lineWidth = 0.5;
@@ -154,13 +159,15 @@
   document.querySelector("#flat").onclick = () => { gx = 0; gy = 0; };
   document.querySelector("#upright").onclick = () => { gx = 0; gy = 1; };
   document.querySelector("#roll").onclick = () => { action = "roll"; };
-  document.querySelector("#reset").onclick = () => { action = "reset"; };
+  document.querySelector("#add").onclick = () => { action = "add"; };
+  document.querySelector("#remove").onclick = () => { action = "remove"; };
   window.addEventListener("keydown", event => {
     if (event.target.closest("input, button") || event.ctrlKey || event.metaKey || event.altKey) return;
     if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space", "Enter", "NumpadEnter"].includes(event.code)) event.preventDefault();
     keys.add(event.code);
     if (["Space", "Enter", "NumpadEnter"].includes(event.code) && !event.repeat) action = "roll";
-    if (event.code === "KeyR") action = "reset";
+    if (event.code === "KeyM" && !event.repeat) action = "add";
+    if (event.code === "KeyB" && !event.repeat) action = "remove";
     if (event.code === "KeyF") { gx = 0; gy = 0; }
     if (event.code === "KeyU") { gx = 0; gy = 1; }
   });
@@ -195,7 +202,7 @@
     const currentAction = action; action = null;
     try {
       const state = await post("/step", {dt, gx: x, gy: y, action: currentAction});
-      draw(state.faces); drawPad(x, y);
+      draw(state.faces, state.count); drawPad(x, y);
       setTimeout(frame, 20);
     } catch (error) { stopped = true; message(`Preview stopped: ${error.message}. Restart the server and reload.`, true); }
   }

@@ -212,6 +212,97 @@ class Dice:
         return visible
 
 
+class DiceTray:
+    MAX_DICE = 6
+
+    def __init__(self, width=320, height=240):
+        self.width, self.height = width, height
+        self.dice = []
+        self.add()
+
+    def add(self):
+        if len(self.dice) >= self.MAX_DICE:
+            return
+        die = Dice(self.width, self.height)
+        die.radius = min(self.width, self.height) / 12
+        left, top, right, bottom = die.bounds
+        # Six well-spaced entry positions; prefer the one furthest from other dice.
+        positions = [(left + (right - left) * (column + 0.5) / 3,
+                      top + (bottom - top) * (row + 0.5) / 2)
+                     for row in range(2) for column in range(3)]
+        die.x, die.y = max(positions, key=lambda p: min(
+            (p[0] - other.x) ** 2 + (p[1] - other.y) ** 2 for other in self.dice
+        ) if self.dice else self.width * self.width)
+        self.dice.append(die)
+
+    def remove(self):
+        if self.dice:
+            self.dice.pop()
+
+    def roll(self):
+        for die in self.dice:
+            die.roll()
+
+    def flip(self):
+        for die in self.dice:
+            die.flip()
+
+    def _constrain(self, die):
+        ex, ey = die.extents()
+        left, top, right, bottom = die.bounds
+        die.x = clamp(die.x, left + ex, right - ex)
+        die.y = clamp(die.y, top + ey, bottom - ey)
+
+    def _collide(self, a, b, dt):
+        ax, ay = a.extents()
+        bx, by = b.extents()
+        dx, dy = b.x - a.x, b.y - a.y
+        ox, oy = ax + bx - abs(dx), ay + by - abs(dy)
+        if ox <= 0 or oy <= 0:
+            return
+        # Projected bounding boxes keep pair collisions cheap on MicroPython.
+        axis = 0 if ox < oy else 1
+        direction = 1 if (dx if axis == 0 else dy) >= 0 else -1
+        overlap = ox if axis == 0 else oy
+        position = "x" if axis == 0 else "y"
+        velocity = "vx" if axis == 0 else "vy"
+        setattr(a, position, getattr(a, position) - direction * overlap / 2)
+        setattr(b, position, getattr(b, position) + direction * overlap / 2)
+        relative = (getattr(b, velocity) - getattr(a, velocity)) * direction
+        if relative < 0:
+            impulse = -relative * 0.65
+            setattr(a, velocity, getattr(a, velocity) - direction * impulse)
+            setattr(b, velocity, getattr(b, velocity) + direction * impulse)
+        for die, sign in ((a, direction), (b, -direction)):
+            gravity = die.gx if axis == 0 else die.gy
+            support = max(0, gravity * sign * 580)
+            if support:
+                die._support(axis, sign, support, dt)
+                damping = math.exp(-dt * 4)
+                die.wx *= damping
+                die.wy *= damping
+                die.wz *= damping
+                if die.vx * die.vx + die.vy * die.vy < 16:
+                    die._settle(axis)
+
+    def step(self, elapsed, gx, gy):
+        remaining = clamp(elapsed, 0, 0.1)
+        while remaining > 0.000001:
+            dt = min(remaining, 1 / 120)
+            remaining -= dt
+            for die in self.dice:
+                die.step(dt, gx, gy)
+            for iteration in range(4):
+                for i, die in enumerate(self.dice):
+                    for other in self.dice[i + 1:]:
+                        self._collide(die, other, dt if iteration == 0 else 0)
+                for die in self.dice:
+                    self._constrain(die)
+
+    def faces(self):
+        return [face for die in self.dice for face in die.faces()]
+
+
 def texture_spans(corners):
     """Affine scanlines for an orthographic cube face, using normalized UVs."""
     a, b, c, d = corners

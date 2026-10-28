@@ -7,11 +7,11 @@ APP_DIR = "/system/apps/tilt_dice"
 os.chdir(APP_DIR)
 sys.path.insert(0, APP_DIR)
 
-from physics import Dice, gravity_from_imu, texture_spans
+from physics import DiceTray, gravity_from_imu, texture_spans
 
 badge.mode(HIRES | VSYNC)
 screen.font = font.nope
-die = Dice(screen.width, screen.height)
+tray = DiceTray(screen.width, screen.height)
 textures = []
 asset_error = None
 for face in range(1, 7):
@@ -27,7 +27,6 @@ for face in range(1, 7):
         break
 
 orientation = badge.upside_down()
-show_help = True
 BG = color.rgb(13, 18, 30)
 TRAY = color.rgb(27, 38, 55)
 EDGE = color.rgb(62, 82, 105)
@@ -36,7 +35,7 @@ ACCENT = color.rgb(195, 247, 110)
 
 
 def draw_die():
-    for _depth, face, corners, light in die.faces():
+    for _depth, face, corners, light in tray.faces():
         texture = textures[face]
         for x, y, length, u0, v0, u1, v1 in texture_spans(corners):
             screen.blit_hspan(texture, x, y, length, u0, v0, u1, v1)
@@ -51,11 +50,12 @@ def draw_die():
 
 
 def update():
-    global orientation, show_help
+    global orientation
     screen.pen = BG
     screen.rectangle(screen.clip)
     screen.pen = ACCENT
     screen.text("TILT DICE", 10, 8)
+    screen.text("%d / 6" % len(tray.dice), screen.width - 55, 8)
     screen.pen = EDGE
     screen.rectangle(7, 29, screen.width - 14, screen.height - 40)
     screen.pen = TRAY
@@ -69,7 +69,7 @@ def update():
 
     flipped = badge.upside_down()
     if flipped != orientation:
-        die.flip()
+        tray.flip()
         orientation = flipped
     ax, ay, _az, _gx, _gy, _gz = badge.imu()
     gx, gy = gravity_from_imu(ax, ay, orientation)
@@ -82,16 +82,15 @@ def update():
     elif badge.held(BUTTON_DOWN):
         gy = 1
     if badge.pressed(BUTTON_SELECT):
-        die.roll()
+        tray.roll()
     if badge.pressed(BUTTON_BACK):
-        die.reset()
+        tray.remove()
     if badge.pressed(BUTTON_MENU):
-        show_help = not show_help
-    die.step(badge.ticks_delta / 1000, gx, gy)
+        tray.add()
+    tray.step(badge.ticks_delta / 1000, gx, gy)
     draw_die()
-    if show_help:
-        screen.pen = INK
-        screen.text("SELECT toss  BACK reset", 16, screen.height - 31)
+    screen.pen = INK
+    screen.text("MENU +  BACK -  SELECT toss", 10, screen.height - 10)
 
 
 run(update)

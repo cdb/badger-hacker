@@ -97,14 +97,17 @@ class Handler(BaseHTTPRequestHandler):
                 dt = number(data, "dt", 0)
                 gx, gy = number(data, "gx", 0), number(data, "gy", 1)
                 action = data.get("action")
-                if action not in (None, "roll", "reset"):
+                if action not in (None, "roll", "add", "remove"):
                     raise ValueError("Unknown dice action")
                 if action == "roll":
-                    self.server.die.roll()
-                elif action == "reset":
-                    self.server.die.reset()
-                self.server.die.step(dt, gx, gy)
-                self.reply(200, {"faces": self.server.die.faces()})
+                    self.server.tray.roll()
+                elif action == "add":
+                    self.server.tray.add()
+                elif action == "remove":
+                    self.server.tray.remove()
+                self.server.tray.step(dt, gx, gy)
+                self.reply(200, {"faces": self.server.tray.faces(),
+                                 "count": len(self.server.tray.dice)})
             elif self.path == "/faces":
                 faces = data.get("faces")
                 if not isinstance(faces, list) or not 1 <= len(faces) <= 6:
@@ -133,7 +136,7 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
     server = HTTPServer(("127.0.0.1", args.port), Handler)
-    server.die = physics.Dice()
+    server.tray = physics.DiceTray()
     print("Tilt Dice preview: http://127.0.0.1:%d" % server.server_port, flush=True)
     print("Local only. No badge access. Photos stay in this project.", flush=True)
     try:
