@@ -15,7 +15,8 @@ screen-up removes in-screen gravity so motion gradually slows.
 - HOME: return to the launcher.
 
 This is playful, lightweight physics: screen-plane motion with bouncing walls,
-friction, and three-dimensional rotation. It is not a fair random-number
+friction, contact torque that tips the cube onto a face, and three-dimensional
+rotation. It is not a fair random-number
 generator or a full rigid-body simulator. Images stay attached to their faces.
 The cube uses orthographic projection and face shading.
 
@@ -28,7 +29,7 @@ python3 tools/preview_tilt_dice.py
 ```
 
 Open `http://127.0.0.1:8765`. Drag the gravity pad or hold the arrow keys to
-simulate tilt. Space tosses the die and R resets it. Choose **Lay flat** for
+simulate tilt. Enter or Space tosses the die and R resets it. Choose **Lay flat** for
 zero screen-plane gravity.
 
 **Choose photos** accepts one to six PNG, JPEG, or WebP images. They are

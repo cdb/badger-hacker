@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "badge" / "apps" / "tilt_dice"
 sys.path.insert(0, str(APP))
-from physics import Dice, gravity_from_imu, texture_spans
+from physics import Dice, gravity_from_imu, rotation, texture_spans
 
 spec = importlib.util.spec_from_file_location("preview", ROOT / "tools" / "preview_tilt_dice.py")
 preview = importlib.util.module_from_spec(spec)
@@ -52,6 +52,40 @@ class PhysicsTests(unittest.TestCase):
                 self.assertLess(gap, 0.1)
                 self.assertLess(math.hypot(self.die.vx, self.die.vy), 0.5)
                 self.assertLess(max(abs(self.die.wx), abs(self.die.wy), abs(self.die.wz)), 0.05)
+                axis = 0 if gx else 1
+                self.assertGreater(max(abs(v) for v in rotation(self.die.q)[axis]), 0.99999)
+                self.assertAlmostEqual((ex, ey)[axis], self.die.radius, places=3)
+
+    def test_tosses_land_on_faces_not_corners(self):
+        for seed in range(12):
+            for gx, gy in ((0, 1), (-1, 0), (1, 0), (0, -1), (1, 1)):
+                with self.subTest(seed=seed, gravity=(gx, gy)):
+                    random.seed(seed)
+                    self.die.reset()
+                    self.die.roll()
+                    self.advance(gx, gy, 15)
+                    self.assert_contained()
+                    matrix = rotation(self.die.q)
+                    for axis, gravity in enumerate((gx, gy)):
+                        if gravity:
+                            self.assertGreater(max(abs(v) for v in matrix[axis]), 0.99999)
+                    self.assertLess(max(abs(self.die.wx), abs(self.die.wy), abs(self.die.wz)), 0.05)
+
+    def test_near_corner_tips_over_instead_of_freezing(self):
+        for degrees in (20, 43, 47, 70):
+            with self.subTest(angle=degrees):
+                angle = math.radians(degrees) / 2
+                self.die.reset()
+                self.die.q = (math.cos(angle), 0, 0, math.sin(angle))
+                self.advance(0, 1, 12)
+                self.assertGreater(max(abs(v) for v in rotation(self.die.q)[1]), 0.99999)
+
+    def test_settled_die_can_tumble_to_a_different_wall(self):
+        self.advance(0, 1, 12)
+        self.advance(-1, 0, 12)
+        ex, _ey = self.die.extents()
+        self.assertAlmostEqual(self.die.x - ex, self.die.bounds[0], places=3)
+        self.assertGreater(max(abs(v) for v in rotation(self.die.q)[0]), 0.99999)
 
     def test_no_drift_after_settling(self):
         self.advance(0, 1, 25)

@@ -65,7 +65,7 @@
         <div class="device-footer" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       </div>
       <div class="actions"><button id="roll" class="primary">Toss the die</button><button id="reset">Reset</button></div>
-      <p class="hint"><kbd>Arrow keys</kbd> tilt &nbsp; <kbd>Space</kbd> toss &nbsp; <kbd>R</kbd> reset</p>
+      <p class="hint"><kbd>Arrow keys</kbd> tilt &nbsp; <kbd>Enter</kbd> / <kbd>Space</kbd> toss &nbsp; <kbd>R</kbd> reset</p>
     </section>
     <aside aria-label="Gravity controls">
       <h2>Which way is down?</h2>
@@ -157,9 +157,9 @@
   document.querySelector("#reset").onclick = () => { action = "reset"; };
   window.addEventListener("keydown", event => {
     if (event.target.closest("input, button") || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(event.code)) event.preventDefault();
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space", "Enter", "NumpadEnter"].includes(event.code)) event.preventDefault();
     keys.add(event.code);
-    if (event.code === "Space" && !event.repeat) action = "roll";
+    if (["Space", "Enter", "NumpadEnter"].includes(event.code) && !event.repeat) action = "roll";
     if (event.code === "KeyR") action = "reset";
     if (event.code === "KeyF") { gx = 0; gy = 0; }
     if (event.code === "KeyU") { gx = 0; gy = 1; }

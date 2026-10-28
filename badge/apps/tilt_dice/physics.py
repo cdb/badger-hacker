@@ -90,6 +90,43 @@ class Dice:
         return (self.radius * sum(abs(value) for value in matrix[0]),
                 self.radius * sum(abs(value) for value in matrix[1]))
 
+    def _support(self, axis, direction, acceleration, dt):
+        matrix = rotation(self.q)
+        row = matrix[axis]
+        # Average the support near an edge/face instead of alternating vertices.
+        corner = [direction * clamp(value / 0.04, -1, 1) * self.radius for value in row]
+        rx, ry, rz = transform(matrix, corner)
+        force = -direction * acceleration
+        scale = 1.5 * dt / (self.radius * self.radius)
+        if axis == 0:
+            self.wy += rz * force * scale
+            self.wz -= ry * force * scale
+        else:
+            self.wx -= rz * force * scale
+            self.wz += rx * force * scale
+
+    def _settle(self, axis):
+        matrix = rotation(self.q)
+        index = max(range(3), key=lambda i: abs(matrix[axis][i]))
+        normal = tuple(matrix[i][index] for i in range(3))
+        target = [0, 0, 0]
+        target[axis] = 1 if normal[axis] > 0 else -1
+        alignment = abs(normal[axis])
+        if alignment < 0.99999 or max(abs(self.wx), abs(self.wy), abs(self.wz)) > 0.08:
+            return
+        # Remove sub-pixel contact jitter only once a face is already at rest.
+        correction = (1 + alignment,
+                      normal[1] * target[2] - normal[2] * target[1],
+                      normal[2] * target[0] - normal[0] * target[2],
+                      normal[0] * target[1] - normal[1] * target[0])
+        length = math.sqrt(sum(v * v for v in correction))
+        self.q = multiply(tuple(v / length for v in correction), self.q)
+        self._normalize()
+        if axis == 0:
+            self.wy, self.wz = 0.0, 0.0
+        else:
+            self.wx, self.wz = 0.0, 0.0
+
     def step(self, elapsed, gx, gy):
         # Bound catch-up work after a pause and resolve fast motion in short steps.
         remaining = clamp(elapsed, 0, 0.1)
@@ -113,35 +150,49 @@ class Dice:
 
             ex, ey = self.extents()
             left, top, right, bottom = self.bounds
-            contact_x = self.x < left + ex or self.x > right - ex
-            contact_y = self.y < top + ey or self.y > bottom - ey
+            contact_x = self.x <= left + ex + 0.05 or self.x >= right - ex - 0.05
+            contact_y = self.y <= top + ey + 0.05 or self.y >= bottom - ey - 0.05
+            support_x = 0
+            support_y = 0
             if contact_x:
+                direction = -1 if self.x < (left + right) / 2 else 1
                 self.x = clamp(self.x, left + ex, right - ex)
                 outward = (self.x <= left + ex and self.vx < 0 or
                            self.x >= right - ex and self.vx > 0)
                 if outward:
                     self.vx = -self.vx * 0.42 if abs(self.vx) > 12 else 0
                 self.vy *= math.exp(-dt * 9)
+                support_x = max(0, direction * ax)
+                self._support(0, direction, support_x, dt)
             if contact_y:
+                direction = -1 if self.y < (top + bottom) / 2 else 1
                 self.y = clamp(self.y, top + ey, bottom - ey)
                 outward = (self.y <= top + ey and self.vy < 0 or
                            self.y >= bottom - ey and self.vy > 0)
                 if outward:
                     self.vy = -self.vy * 0.42 if abs(self.vy) > 12 else 0
                 self.vx *= math.exp(-dt * 9)
+                support_y = max(0, direction * ay)
+                self._support(1, direction, support_y, dt)
 
             # Use collision-resolved velocity so gravity cannot spin a resting die.
             blend = 1 - math.exp(-dt * 3)
             self.wx += (-self.vy / self.radius - self.wx) * blend
             self.wy += (self.vx / self.radius - self.wy) * blend
             self.wz *= math.exp(-dt * 2.5)
-            if (contact_x or contact_y) and self.vx * self.vx + self.vy * self.vy < 16:
-                damping = math.exp(-dt * 16)
+            if support_x or support_y:
+                damping = math.exp(-dt * 4)
                 self.wx *= damping
                 self.wy *= damping
                 self.wz *= damping
-                if max(abs(self.wx), abs(self.wy), abs(self.wz)) < 0.02:
-                    self.wx, self.wy, self.wz = 0.0, 0.0, 0.0
+                if self.vx * self.vx + self.vy * self.vy < 16:
+                    if support_x:
+                        self._settle(0)
+                    if support_y:
+                        self._settle(1)
+                    ex, ey = self.extents()
+                    self.x = clamp(self.x, left + ex, right - ex)
+                    self.y = clamp(self.y, top + ey, bottom - ey)
 
     def faces(self):
         matrix = rotation(self.q)
