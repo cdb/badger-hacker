@@ -13,11 +13,13 @@ Small, independent apps for the GitHub Universe 2026 badge live under
 Run the Tilt Dice preview from this folder:
 
 ```sh
-python3 tools/preview_tilt_dice.py
+python3 badge/apps/tilt_dice/preview/server.py
 ```
 
 Open `http://127.0.0.1:8765`. No packages, badge connection, or network account
 are required. The preview listens only on this computer.
+Its web page and server are committed in `badge/apps/tilt_dice/preview/`.
+The previous `python3 tools/preview_tilt_dice.py` command still works.
 
 For Stick Dance, use a separate port if Tilt Dice is already running:
 

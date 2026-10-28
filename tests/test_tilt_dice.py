@@ -15,7 +15,7 @@ APP = ROOT / "badge" / "apps" / "tilt_dice"
 sys.path.insert(0, str(APP))
 from physics import Dice, DiceTray, gravity_from_imu, rotation, texture_spans
 
-spec = importlib.util.spec_from_file_location("preview", ROOT / "tools" / "preview_tilt_dice.py")
+spec = importlib.util.spec_from_file_location("preview", APP / "preview" / "server.py")
 preview = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(preview)
 

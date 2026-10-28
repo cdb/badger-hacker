@@ -32,13 +32,18 @@ simulation lightweight; small gaps between angled faces are possible.
 From the project root:
 
 ```sh
-python3 tools/preview_tilt_dice.py
+python3 badge/apps/tilt_dice/preview/server.py
 ```
 
 Open `http://127.0.0.1:8765`. Drag the gravity pad or hold the arrow keys to
 simulate tilt. Enter or Space tosses all dice, M adds a die, and B removes one.
 The + and - buttons do the same, with a visible 0 to 6 count. Choose **Lay flat**
 for zero screen-plane gravity.
+
+The web page and Python server live together in `preview/`. Unlike Stick
+Dance's static preview, this preview needs its Python server to run the badge's
+shared physics and save photo faces. The old command
+`python3 tools/preview_tilt_dice.py` remains a compatible launcher.
 
 **Choose photos** accepts one to six PNG, JPEG, or WebP images. They are
 center-cropped into 48x48 PNG files and replace `assets/1.png` through
