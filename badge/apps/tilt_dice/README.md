@@ -57,5 +57,6 @@ python3 /path/to/hyb26-skill/scripts/validate_app.py badge/apps/tilt_dice
 Physical verification is deliberately outstanding. When deployment is wanted,
 check tilt-axis directions, slow settling, wall collisions, a sideways badge,
 the launcher's inverted orientation, photo readability and frame rate, all
-controls, HOME and reopen, and the custom icon on the real menu. Accelerometer
-axis mapping and rendering speed have not been confirmed on this badge.
+controls, HOME and reopen, and the custom icon on the real menu. The vertical
+accelerometer sign was corrected from on-badge feedback; the corrected direction,
+inverted orientation, and rendering speed still need confirmation.

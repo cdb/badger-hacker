@@ -23,7 +23,7 @@ def clamp(value, low, high):
 def gravity_from_imu(ax, ay, upside_down=False):
     """Map sensor Gs to display coordinates, including the launcher's 180 flip."""
     sign = -1 if upside_down else 1
-    return clamp(sign * ax / 16384, -1, 1), clamp(-sign * ay / 16384, -1, 1)
+    return clamp(sign * ax / 16384, -1, 1), clamp(sign * ay / 16384, -1, 1)
 
 
 def multiply(a, b):

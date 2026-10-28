@@ -134,10 +134,12 @@ class PhysicsTests(unittest.TestCase):
             self.assertAlmostEqual(a, b)
 
     def test_imu_scaling_and_orientation(self):
-        self.assertEqual(gravity_from_imu(0, -16384), (0, 1))
-        self.assertEqual(gravity_from_imu(0, 16384, True), (0, 1))
+        self.assertEqual(gravity_from_imu(0, 16384), (0, 1))
+        self.assertEqual(gravity_from_imu(0, -16384), (0, -1))
+        self.assertEqual(gravity_from_imu(0, -16384, True), (0, 1))
+        self.assertEqual(gravity_from_imu(0, 16384, True), (0, -1))
         self.assertEqual(gravity_from_imu(16384, 0), (1, 0))
-        self.assertEqual(gravity_from_imu(100000, -100000), (1, 1))
+        self.assertEqual(gravity_from_imu(100000, -100000), (1, -1))
 
     def test_projection_is_affine_and_face_ids_are_stable(self):
         for _ in range(120):
@@ -274,7 +276,7 @@ class AssetTests(unittest.TestCase):
                 return self.down
 
             def imu(self):
-                return (0, 16384 if self.down else -16384, 0, 0, 0, 0)
+                return (0, -16384 if self.down else 16384, 0, 0, 0, 0)
 
             def held(self, button):
                 return False
